@@ -8,51 +8,46 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material.min.css">
 
-   <style>
+  <style>
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
+      height: 100%;
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background-color: #1e1e1e;
       color: white;
-      height: 100%;
-      display: flex;
-    }
-
-    .file-explorer {
-  width: 250px;
-  min-width: 250px;
-  max-width: 250px;
-  flex-shrink: 0;
-  background: #2d2d2d;
-  padding: 10px;
-  overflow-y: auto;
-}
-
-    .file-controls {
-      margin-bottom: 12px;
-    }
-
-    .file-preview img, .file-preview audio {
-      max-width: 100%;
-      margin-top: 10px;
     }
 
     .main {
       display: flex;
-      height: 100vh;
-      width: 100vw;
+      height: 100%;
+      width: 100%;
       overflow: hidden;
     }
 
-    .editor-section {
-      width: 60%;
-      min-width: 60%;
-      display: flex;
-      flex: 1;
-      flex-direction: column;
+    .file-explorer {
+      width: 250px;
       background: #2d2d2d;
+      padding: 10px;
+      overflow-y: auto;
+      flex-shrink: 0;
     }
+
+    .editor-preview {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+    .editor-section {
+  flex: 0 0 60%;
+  max-width: 800px; /* prevent too-wide editors */
+  display: flex;
+  flex-direction: column;
+  background: #2d2d2d;
+}
 
     .tabs {
       display: flex;
@@ -76,28 +71,27 @@
     .editor {
       flex: 1;
       display: none;
+      height: 100%;
+      overflow: auto; 
     }
 
     .editor.active {
       display: block;
-      height: 100%;
-    }
-
-    #htmlEditor, #cssEditor, #jsEditor {
-      height: 100%;
-    }
-
-    .editor-preview {
-      display: flex;
-      
-      flex: 1;
-      overflow: hidden;
+  height: 100%;
+  overflow: auto;
     }
 
     iframe {
-      width: 40%;
-      border: none;
-    }
+  flex: 1;
+  width: 40%;
+  min-width: 300px;
+}
+
+#resizer {
+  width: 5px;
+  background: #555;
+  cursor: ew-resize;
+}
 
     button, label.file-btn {
       background-color: #444;
@@ -112,270 +106,266 @@
       text-align: center;
     }
 
-    input[type="file"] {
-      display: none;
+    input[type="file"], input[type="text"] {
+      display: block;
+      width: 100%;
+      padding: 6px;
+      margin-bottom: 10px;
+      background: #3a3a3a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .file-preview img, .file-preview audio {
+      max-width: 100%;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <div class="main">
-    <div class="file-explorer">
-      <p>AASHI Web Editor</p>
-      <button onclick="run()">Run</button>
-      <button onclick="openInNewTab()">Open in New Tab</button>
-      <button onclick="clearAll()">Clear</button>
-      <button onclick="downloadProject()">Download</button>
-      <input type="text" id="urlInput" placeholder="Paste URL to load HTML" style="margin-top:10px; padding: 5px;">
-<button onclick="loadFromURL()">Load URL</button>
+<div class="main">
+  <div class="file-explorer">
+    <p>AASHI Web Editor</p>
+    <button onclick="run()">Run</button>
+    <input type="text" id="liveUrlInput" placeholder="Paste your live site URL">
+    <button onclick="openInNewTab()">Open in New Tab</button>
+    <button onclick="clearAll()">Clear</button>
+    <button onclick="downloadProject()">Download</button>
 
-      <div class="file-controls">
-        <label class="file-btn">Open File
-          <input type="file" id="singleFileInput" multiple>
-        </label>
-        <label class="file-btn">Open Folder
-          <input type="file" id="fileInput" multiple webkitdirectory>
-        </label>
-      </div>
-
-      <ul id="fileList"></ul>
-      <div class="file-preview" id="filePreview"></div>
+    <div class="file-controls">
+      <label class="file-btn">Open File
+        <input type="file" id="singleFileInput" multiple>
+      </label>
+      <label class="file-btn">Open Folder
+        <input type="file" id="fileInput" multiple webkitdirectory>
+      </label>
     </div>
 
-    <div class="editor-preview">
-      <div class="editor-section">
-        <div class="tabs">
-          <div class="tab active" onclick="switchTab('html')">HTML</div>
-          <div class="tab" onclick="switchTab('css')">CSS</div>
-          <div class="tab" onclick="switchTab('js')">JS</div>
-        </div>
-        <div id="html" class="editor active"><div id="htmlEditor"></div></div>
-        <div id="css" class="editor"><div id="cssEditor"></div></div>
-        <div id="js" class="editor"><div id="jsEditor"></div></div>
-      </div>
-
-      <iframe id="output"></iframe>
-    </div>
+    <ul id="fileList"></ul>
+    <div class="file-preview" id="filePreview"></div>
   </div>
 
-  <!-- CodeMirror & JSZip -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+  <div class="editor-preview">
+    <div class="editor-section">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('html')">HTML</div>
+        <div class="tab" onclick="switchTab('css')">CSS</div>
+        <div class="tab" onclick="switchTab('js')">JS</div>
+      </div>
+      <div id="html" class="editor active"><div id="htmlEditor"></div></div>
+      <div id="css" class="editor"><div id="cssEditor"></div></div>
+      <div id="js" class="editor"><div id="jsEditor"></div></div>
+    </div>
+    <div id="resizer"></div>
+    <iframe id="output"></iframe>
+  </div>
+</div>
 
-  <script>
-    const htmlEditor = CodeMirror(document.getElementById('htmlEditor'), {
-      mode: 'htmlmixed', lineNumbers: true, theme: 'material'
-    });
-       htmlEditor.setSize('100%', '100%');
+<!-- CodeMirror & JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
 
-    const cssEditor = CodeMirror(document.getElementById('cssEditor'), {
-      mode: 'css', lineNumbers: true, theme: 'material'
-    });
-    cssEditor.setSize('100%', '100%');
+<script>
+  const htmlEditor = CodeMirror(document.getElementById('htmlEditor'), {
+    mode: 'htmlmixed', lineNumbers: true, theme: 'material'
+  });
+  const cssEditor = CodeMirror(document.getElementById('cssEditor'), {
+    mode: 'css', lineNumbers: true, theme: 'material'
+  });
+  const jsEditor = CodeMirror(document.getElementById('jsEditor'), {
+    mode: 'javascript', lineNumbers: true, theme: 'material'
+  });
 
-    const jsEditor = CodeMirror(document.getElementById('jsEditor'), {
-      mode: 'javascript', lineNumbers: true, theme: 'material'
-    });
-    jsEditor.setSize('100%', '100%');
+  htmlEditor.setSize('100%', '100%');
+  cssEditor.setSize('100%', '100%');
+  jsEditor.setSize('100%', '100%');
 
+  const fileList = document.getElementById('fileList');
+  const filePreview = document.getElementById('filePreview');
+  const output = document.getElementById('output');
+  let mediaFiles = {};
 
-    const fileList = document.getElementById('fileList');
-    const filePreview = document.getElementById('filePreview');
-    const output = document.getElementById('output');
-    let mediaFiles = {};
+  function run() {
+    let html = htmlEditor.getValue();
+    const css = `<style>${cssEditor.getValue()}</style>`;
+    const js = `<script>${jsEditor.getValue()}<\/script>`;
 
-    function run() {
-      let html = htmlEditor.getValue();
-      const css = `<style>${cssEditor.getValue()}</style>`;
-      const js = `<script>${jsEditor.getValue()}<\/script>`;
-
-      for (const [name, data] of Object.entries(mediaFiles)) {
-        const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-        html = html.replace(regex, data);
-      }
-
-      const doc = output.contentDocument || output.contentWindow.document;
-      doc.open();
-      doc.write(html + css + js);
-      doc.close();
-
-      localStorage.setItem('html', htmlEditor.getValue());
-      localStorage.setItem('css', cssEditor.getValue());
-      localStorage.setItem('js', jsEditor.getValue());
+    for (const [name, data] of Object.entries(mediaFiles)) {
+      const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      html = html.replace(regex, data);
     }
 
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.editor').forEach(editor => editor.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
-    }
+    const doc = output.contentDocument || output.contentWindow.document;
+    doc.open();
+    doc.write(html + css + js);
+    doc.close();
 
-    function clearAll() {
-      htmlEditor.setValue('');
-      cssEditor.setValue('');
-      jsEditor.setValue('');
-      fileList.innerHTML = '';
-      filePreview.innerHTML = '';
-      mediaFiles = {};
-      localStorage.clear();
-      run();
-    }
-
-    function renderFileList(name, type, dataUrl) {
-  const li = document.createElement('li');
-  li.textContent = name;
-  li.onclick = () => {
-    filePreview.innerHTML = '';
-    if (type.startsWith('image')) {
-      const img = new Image();
-      img.src = dataUrl;
-      filePreview.appendChild(img);
-    } else if (type.startsWith('audio')) {
-      const audio = document.createElement('audio');
-      audio.controls = true;
-      audio.src = dataUrl;
-      filePreview.appendChild(audio);
-    }
-  };
-  fileList.appendChild(li);
-
-  // Save to localStorage
-  mediaFiles[name] = dataUrl;
-  localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
-}
-
-      function openInNewTab() {
-  let html = htmlEditor.getValue();
-  let css = `<style>${cssEditor.getValue()}</style>`;
-  let js = `<script>${jsEditor.getValue()}<\/script>`;
-
-  for (const [name, data] of Object.entries(mediaFiles)) {
-    const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-    html = html.replace(regex, data);
+    localStorage.setItem('html', htmlEditor.getValue());
+    localStorage.setItem('css', cssEditor.getValue());
+    localStorage.setItem('js', jsEditor.getValue());
   }
 
-  const fullHTML = html + css + js;
-  const blob = new Blob([fullHTML], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-}
 
 
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.editor').forEach(editor => editor.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+  }
 
-    document.getElementById('singleFileInput').addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files);
-      for (const file of files) {
-        const content = await file.text();
-        if (file.name.endsWith('.html')) htmlEditor.setValue(content);
-        else if (file.name.endsWith('.css')) cssEditor.setValue(content);
-        else if (file.name.endsWith('.js')) jsEditor.setValue(content);
-        else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            mediaFiles[file.name] = e.target.result;
-            renderFileList(file.name, file.type, e.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
+  function clearAll() {
+    htmlEditor.setValue('');
+    cssEditor.setValue('');
+    jsEditor.setValue('');
+    fileList.innerHTML = '';
+    filePreview.innerHTML = '';
+    mediaFiles = {};
+    localStorage.clear();
+    run();
+  }
+
+  function renderFileList(name, type, dataUrl) {
+    const li = document.createElement('li');
+    li.textContent = name;
+    li.onclick = () => {
+      filePreview.innerHTML = '';
+      if (type.startsWith('image')) {
+        const img = new Image();
+        img.src = dataUrl;
+        filePreview.appendChild(img);
+      } else if (type.startsWith('audio')) {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = dataUrl;
+        filePreview.appendChild(audio);
       }
-      run();
-    });
+    };
+    fileList.appendChild(li);
+    mediaFiles[name] = dataUrl;
+    localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
+  }
+
+  function openInNewTab() {
+    const url = document.getElementById("liveUrlInput").value.trim();
+    if (!url.startsWith("http")) {
+      alert("Please enter a valid URL.");
+      return;
+    }
+    window.open(url, "_blank");
+  }
+
+  document.getElementById('singleFileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    for (const file of files) {
+      const content = await file.text();
+      if (file.name.endsWith('.html')) htmlEditor.setValue(content);
+      else if (file.name.endsWith('.css')) cssEditor.setValue(content);
+      else if (file.name.endsWith('.js')) jsEditor.setValue(content);
+      else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          mediaFiles[file.name] = e.target.result;
+          renderFileList(file.name, file.type, e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    run();
+  });
 
   document.getElementById('fileInput').addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files);
+    fileList.innerHTML = '';
+    filePreview.innerHTML = '';
+    mediaFiles = {};
 
-  // Clear content but DO NOT remove elements
-  fileList.innerHTML = '';
-  filePreview.innerHTML = '';
-  mediaFiles = {};
-
-  for (const file of files) {
-    const content = await file.text();
-    if (file.name.endsWith('.html')) htmlEditor.setValue(content);
-    else if (file.name.endsWith('.css')) cssEditor.setValue(content);
-    else if (file.name.endsWith('.js')) jsEditor.setValue(content);
-    else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        mediaFiles[file.name] = e.target.result;
-        renderFileList(file.name, file.type, e.target.result);
-      };
-      reader.readAsDataURL(file);
+    for (const file of files) {
+      const content = await file.text();
+      if (file.name.endsWith('.html')) htmlEditor.setValue(content);
+      else if (file.name.endsWith('.css')) cssEditor.setValue(content);
+      else if (file.name.endsWith('.js')) jsEditor.setValue(content);
+      else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          mediaFiles[file.name] = e.target.result;
+          renderFileList(file.name, file.type, e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
-  }
 
-  run();
-});
-
-      async function loadFromURL() {
-  const url = document.getElementById('urlInput').value.trim();
-  if (!url) return alert("Please enter a valid URL.");
-
-  try {
-    const res = await fetch(url);
-    const html = await res.text();
-    htmlEditor.setValue(html);
-    switchTab('html');
     run();
-  } catch (err) {
-    alert("Failed to load URL content. Check CORS or URL validity.");
-    console.error(err);
+  });
+
+  function downloadProject() {
+    const zip = new JSZip();
+    zip.file('index.html', htmlEditor.getValue());
+    zip.file('style.css', cssEditor.getValue());
+    zip.file('script.js', jsEditor.getValue());
+
+    Object.entries(mediaFiles).forEach(([name, dataUrl]) => {
+      const base64 = dataUrl.split(',')[1];
+      zip.file(name, base64, { base64: true });
+    });
+
+    zip.generateAsync({ type: 'blob' }).then(blob => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'project.zip';
+      link.click();
+    });
   }
-}
 
-
-    function downloadProject() {
-      const zip = new JSZip();
-      zip.file('index.html', htmlEditor.getValue());
-      zip.file('style.css', cssEditor.getValue());
-      zip.file('script.js', jsEditor.getValue());
-
-      Object.entries(mediaFiles).forEach(([name, dataUrl]) => {
-        const base64 = dataUrl.split(',')[1];
-        zip.file(name, base64, { base64: true });
-      });
-
-      zip.generateAsync({ type: 'blob' }).then(blob => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'project.zip';
-        link.click();
-      });
-    }
-
-    // Load from localStorage if available
+  window.addEventListener('DOMContentLoaded', () => {
     htmlEditor.setValue(localStorage.getItem('html') || '');
     cssEditor.setValue(localStorage.getItem('css') || '');
     jsEditor.setValue(localStorage.getItem('js') || '');
-       
-       window.addEventListener('DOMContentLoaded', () => {
-  const savedHTML = localStorage.getItem('html');
-  const savedCSS = localStorage.getItem('css');
-  const savedJS = localStorage.getItem('js');
-  const savedMedia = localStorage.getItem('mediaFiles');
-
-  if (savedHTML) htmlEditor.setValue(savedHTML);
-  if (savedCSS) cssEditor.setValue(savedCSS);
-  if (savedJS) jsEditor.setValue(savedJS);
-
-  if (savedMedia) {
-    mediaFiles = JSON.parse(savedMedia);
-    for (const [name, dataUrl] of Object.entries(mediaFiles)) {
-      const type = dataUrl.startsWith('data:image') ? 'image' : 
-                   dataUrl.startsWith('data:audio') ? 'audio' : '';
-      renderFileList(name, type, dataUrl);
+    const savedMedia = localStorage.getItem('mediaFiles');
+    if (savedMedia) {
+      mediaFiles = JSON.parse(savedMedia);
+      for (const [name, dataUrl] of Object.entries(mediaFiles)) {
+        const type = dataUrl.startsWith('data:image') ? 'image' :
+                     dataUrl.startsWith('data:audio') ? 'audio' : '';
+        renderFileList(name, type, dataUrl);
+      }
     }
+    run();
+  });
+                    const resizer = document.getElementById('resizer');
+const leftPane = document.querySelector('.editor-section');
+const rightPane = document.getElementById('output');
+
+resizer.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  document.body.style.cursor = 'ew-resize';
+
+  const startX = e.clientX;
+  const startLeftWidth = leftPane.getBoundingClientRect().width;
+
+  function onMouseMove(e) {
+    const newLeftWidth = startLeftWidth + (e.clientX - startX);
+    leftPane.style.width = newLeftWidth + 'px';
+    leftPane.style.flex = 'none';
+    rightPane.style.flex = '1'; // Let right pane fill remaining space
   }
 
-  run();
+  function onMouseUp() {
+    document.body.style.cursor = 'default';
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
 });
 
 
-    run();
-  </script>
+</script>
 </body>
 </html>
