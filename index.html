@@ -2,33 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AASHI Ultimate Web Editor</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  <title>AASHI Web Editor</title>
 
+  <!-- CodeMirror CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material.min.css">
+
+   <style>
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background-color: #1e1e1e;
       color: white;
+      height: 100%;
+      display: flex;
+    }
+
+    .file-explorer {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  flex-shrink: 0;
+  background: #2d2d2d;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+    .file-controls {
+      margin-bottom: 12px;
+    }
+
+    .file-preview img, .file-preview audio {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+
+    .main {
       display: flex;
       height: 100vh;
+      width: 100vw;
+      overflow: hidden;
     }
 
-    header {
-      padding: 10px 20px;
-      background-color: #151515;
+    .editor-section {
+      width: 60%;
+      min-width: 60%;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #333;
+      flex: 1;
+      flex-direction: column;
+      background: #2d2d2d;
     }
 
-    .buttons {
+    .tabs {
       display: flex;
-      gap: 10px;
+      background: #1e1e1e;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      background: #1e1e1e;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab.active {
+      background: #2d2d2d;
+      border-bottom: 3px solid #00bfff;
+    }
+
+    .editor {
+      flex: 1;
+      display: none;
+    }
+
+    .editor.active {
+      display: block;
+      height: 100%;
+    }
+
+    #htmlEditor, #cssEditor, #jsEditor {
+      height: 100%;
+    }
+
+    .editor-preview {
+      display: flex;
+      
+      flex: 1;
+      overflow: hidden;
+    }
+
+    iframe {
+      width: 40%;
+      border: none;
     }
 
     button, label.file-btn {
@@ -39,309 +107,256 @@
       cursor: pointer;
       border-radius: 4px;
       font-size: 14px;
+      margin-bottom: 8px;
+      display: block;
+      text-align: center;
     }
 
     input[type="file"] {
       display: none;
     }
-
-    .container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .file-explorer {
-      width: 300px;
-      background-color: #2d2d2d;
-      border-right: 1px solid #444;
-      overflow-y: auto;
-      padding: 10px;
-    }
-
-    .file-explorer ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-
-    .file-explorer li {
-      padding: 5px;
-      cursor: pointer;
-      margin-bottom: 5px;
-      background-color: #444;
-      border-radius: 4px;
-    }
-
-    .file-explorer li:hover {
-      background-color: #555;
-    }
-
-    .file-preview {
-      margin-top: 10px;
-    }
-
-    .file-preview img {
-      width: 100px;
-      height: auto;
-    }
-
-    .file-preview audio {
-      width: 100%;
-    }
-
-    .editor-section {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid #444;
-      background-color: #2d2d2d;
-    }
-
-    .tabs {
-      display: flex;
-      background-color: #1e1e1e;
-      border-bottom: 1px solid #333;
-    }
-
-    .tab {
-      flex: 1;
-      text-align: center;
-      padding: 10px;
-      cursor: pointer;
-      font-weight: bold;
-      background-color: #1e1e1e;
-      border-bottom: 3px solid transparent;
-    }
-
-    .tab.active {
-      border-bottom: 3px solid #00bfff;
-      background-color: #2d2d2d;
-    }
-
-    .editor {
-      flex: 1;
-      display: none;
-    }
-
-    .editor.active {
-      display: block;
-    }
-
-    textarea {
-      width: 100%;
-      height: 100%;
-      background-color: #2d2d2d;
-      color: white;
-      border: none;
-      font-family: monospace;
-      font-size: 14px;
-      padding: 10px;
-      outline: none;
-      resize: none;
-    }
-
-    iframe {
-      flex: 1;
-      border: none;
-      background: white;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-
-      iframe {
-        height: 50vh;
-        width: 100%;
-      }
-
-      .editor-section {
-        height: 50vh;
-        border-right: none;
-      }
-
-      .file-explorer {
-        width: 100%;
-        height: 150px;
-        overflow-y: auto;
-      }
-    }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="buttons">
-      <label class="file-btn">
-        Open Folder
-        <input type="file" id="fileInput" multiple webkitdirectory>
-      </label>
-      <button onclick="run()">Run</button>
-      <button onclick="clearCode()">Clear</button>
-      <button onclick="downloadProject()">Download</button>
-    </div>
-  </header>
-
-  <div class="container">
-    <!-- File Explorer -->
+  <div class="main">
     <div class="file-explorer">
+      <p>AASHI Web Editor</p>
+      <button onclick="run()">Run</button>
+      <button onclick="openInNewTab()">Open in New Tab</button>
+      <button onclick="clearAll()">Clear</button>
+      <button onclick="downloadProject()">Download</button>
+
+      <div class="file-controls">
+        <label class="file-btn">Open File
+          <input type="file" id="singleFileInput" multiple>
+        </label>
+        <label class="file-btn">Open Folder
+          <input type="file" id="fileInput" multiple webkitdirectory>
+        </label>
+      </div>
+
       <ul id="fileList"></ul>
+      <div class="file-preview" id="filePreview"></div>
     </div>
 
-    <!-- Editor Section -->
-    <div class="editor-section">
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('html')">HTML</div>
-        <div class="tab" onclick="switchTab('css')">CSS</div>
-        <div class="tab" onclick="switchTab('js')">JS</div>
+    <div class="editor-preview">
+      <div class="editor-section">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('html')">HTML</div>
+          <div class="tab" onclick="switchTab('css')">CSS</div>
+          <div class="tab" onclick="switchTab('js')">JS</div>
+        </div>
+        <div id="html" class="editor active"><div id="htmlEditor"></div></div>
+        <div id="css" class="editor"><div id="cssEditor"></div></div>
+        <div id="js" class="editor"><div id="jsEditor"></div></div>
       </div>
 
-      <div id="html" class="editor active">
-        <textarea id="htmlEditor"></textarea>
-      </div>
-      <div id="css" class="editor">
-        <textarea id="cssEditor"></textarea>
-      </div>
-      <div id="js" class="editor">
-        <textarea id="jsEditor"></textarea>
-      </div>
+      <iframe id="output"></iframe>
     </div>
-
-    <!-- Output Preview -->
-    <iframe id="output"></iframe>
   </div>
 
+  <!-- CodeMirror & JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+
   <script>
-    const htmlEl = document.getElementById('htmlEditor');
-    const cssEl = document.getElementById('cssEditor');
-    const jsEl = document.getElementById('jsEditor');
-    const output = document.getElementById('output');
-    const fileInput = document.getElementById('fileInput');
+    const htmlEditor = CodeMirror(document.getElementById('htmlEditor'), {
+      mode: 'htmlmixed', lineNumbers: true, theme: 'material'
+    });
+       htmlEditor.setSize('100%', '100%');
+
+    const cssEditor = CodeMirror(document.getElementById('cssEditor'), {
+      mode: 'css', lineNumbers: true, theme: 'material'
+    });
+    cssEditor.setSize('100%', '100%');
+
+    const jsEditor = CodeMirror(document.getElementById('jsEditor'), {
+      mode: 'javascript', lineNumbers: true, theme: 'material'
+    });
+    jsEditor.setSize('100%', '100%');
+
+
     const fileList = document.getElementById('fileList');
-
-    let files = {};
-
-    // Restore code from localStorage
-    htmlEl.value = localStorage.getItem("html") || "";
-    cssEl.value = localStorage.getItem("css") || "";
-    jsEl.value = localStorage.getItem("js") || "";
+    const filePreview = document.getElementById('filePreview');
+    const output = document.getElementById('output');
+    let mediaFiles = {};
 
     function run() {
-      const html = htmlEl.value;
-      const css = `<style>${cssEl.value}</style>`;
-      const js = `<script>${jsEl.value}<\/script>`;
+      let html = htmlEditor.getValue();
+      const css = `<style>${cssEditor.getValue()}</style>`;
+      const js = `<script>${jsEditor.getValue()}<\/script>`;
+
+      for (const [name, data] of Object.entries(mediaFiles)) {
+        const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        html = html.replace(regex, data);
+      }
+
       const doc = output.contentDocument || output.contentWindow.document;
       doc.open();
       doc.write(html + css + js);
       doc.close();
 
-      // Save to localStorage
-      localStorage.setItem("html", html);
-      localStorage.setItem("css", cssEl.value);
-      localStorage.setItem("js", jsEl.value);
-    }
-
-    function clearCode() {
-      htmlEl.value = "";
-      cssEl.value = "";
-      jsEl.value = "";
-      localStorage.clear();
-      run();
-      
-      // Clear the file explorer
-      fileList.innerHTML = '';
+      localStorage.setItem('html', htmlEditor.getValue());
+      localStorage.setItem('css', cssEditor.getValue());
+      localStorage.setItem('js', jsEditor.getValue());
     }
 
     function switchTab(tabId) {
-      document.querySelectorAll('.editor').forEach(e => e.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.editor').forEach(editor => editor.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
       document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
     }
 
-    fileInput.addEventListener('change', async (event) => {
-      const filesArray = event.target.files;
-      files = {};
-      fileList.innerHTML = ''; // Clear the current list
+    function clearAll() {
+      htmlEditor.setValue('');
+      cssEditor.setValue('');
+      jsEditor.setValue('');
+      fileList.innerHTML = '';
+      filePreview.innerHTML = '';
+      mediaFiles = {};
+      localStorage.clear();
+      run();
+    }
 
-      for (let file of filesArray) {
+    function renderFileList(name, type, dataUrl) {
+  const li = document.createElement('li');
+  li.textContent = name;
+  li.onclick = () => {
+    filePreview.innerHTML = '';
+    if (type.startsWith('image')) {
+      const img = new Image();
+      img.src = dataUrl;
+      filePreview.appendChild(img);
+    } else if (type.startsWith('audio')) {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = dataUrl;
+      filePreview.appendChild(audio);
+    }
+  };
+  fileList.appendChild(li);
+
+  // Save to localStorage
+  mediaFiles[name] = dataUrl;
+  localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
+}
+
+      function openInNewTab() {
+  let html = htmlEditor.getValue();
+  let css = `<style>${cssEditor.getValue()}</style>`;
+  let js = `<script>${jsEditor.getValue()}<\/script>`;
+
+  for (const [name, data] of Object.entries(mediaFiles)) {
+    const regex = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, data);
+  }
+
+  const fullHTML = html + css + js;
+  const blob = new Blob([fullHTML], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+
+
+    document.getElementById('singleFileInput').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      for (const file of files) {
         const content = await file.text();
-        if (file.name.endsWith('.html')) {
-          htmlEl.value = content;
-          localStorage.setItem("html", content);
-        } else if (file.name.endsWith('.css')) {
-          cssEl.value = content;
-          localStorage.setItem("css", content);
-        } else if (file.name.endsWith('.js')) {
-          jsEl.value = content;
-          localStorage.setItem("js", content);
-        } else {
-          const blobUrl = URL.createObjectURL(file);
-          files[file.name] = blobUrl;
-          renderFile(file);
+        if (file.name.endsWith('.html')) htmlEditor.setValue(content);
+        else if (file.name.endsWith('.css')) cssEditor.setValue(content);
+        else if (file.name.endsWith('.js')) jsEditor.setValue(content);
+        else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            mediaFiles[file.name] = e.target.result;
+            renderFileList(file.name, file.type, e.target.result);
+          };
+          reader.readAsDataURL(file);
         }
       }
       run();
     });
 
-    function renderFile(file) {
-      const li = document.createElement('li');
-      li.textContent = file.name;
-      li.onclick = () => previewFile(file);
-      fileList.appendChild(li);
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+
+  // Clear content but DO NOT remove elements
+  fileList.innerHTML = '';
+  filePreview.innerHTML = '';
+  mediaFiles = {};
+
+  for (const file of files) {
+    const content = await file.text();
+    if (file.name.endsWith('.html')) htmlEditor.setValue(content);
+    else if (file.name.endsWith('.css')) cssEditor.setValue(content);
+    else if (file.name.endsWith('.js')) jsEditor.setValue(content);
+    else if (file.type.startsWith('image') || file.type.startsWith('audio')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        mediaFiles[file.name] = e.target.result;
+        renderFileList(file.name, file.type, e.target.result);
+      };
+      reader.readAsDataURL(file);
     }
+  }
 
-    function previewFile(file) {
-      const filePreview = document.querySelector('.file-preview');
-      if (!filePreview) {
-        const previewContainer = document.createElement('div');
-        previewContainer.classList.add('file-preview');
-        document.querySelector('.file-explorer').appendChild(previewContainer);
-      }
-
-      const filePreviewContainer = document.querySelector('.file-preview');
-      filePreviewContainer.innerHTML = ''; // Clear previous preview
-
-      if (file.name.endsWith('.jpg') || file.name.endsWith('.png') || file.name.endsWith('.gif')) {
-        const img = document.createElement('img');
-        img.src = files[file.name];
-        filePreviewContainer.appendChild(img);
-      } else if (file.name.endsWith('.mp3') || file.name.endsWith('.wav')) {
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        audio.src = files[file.name];
-        filePreviewContainer.appendChild(audio);
-      }
-    }
+  run();
+});
 
     function downloadProject() {
       const zip = new JSZip();
-      zip.file("index.html", htmlEl.value);
-      zip.file("style.css", cssEl.value);
-      zip.file("script.js", jsEl.value);
+      zip.file('index.html', htmlEditor.getValue());
+      zip.file('style.css', cssEditor.getValue());
+      zip.file('script.js', jsEditor.getValue());
 
-      Object.keys(files).forEach(filename => {
-        const fileBlob = files[filename];
-        fetch(fileBlob).then(res => res.blob())
-          .then(blob => {
-            zip.file(filename, blob);
-          });
+      Object.entries(mediaFiles).forEach(([name, dataUrl]) => {
+        const base64 = dataUrl.split(',')[1];
+        zip.file(name, base64, { base64: true });
       });
 
-      zip.generateAsync({ type: "blob" }).then(function(content) {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(content);
-        link.download = "project.zip";
+      zip.generateAsync({ type: 'blob' }).then(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'project.zip';
         link.click();
       });
     }
 
-    run();  // Initialize first render
-  </script>
-  
-  <!-- Include JSZip library for downloading the project as a zip file -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+    // Load from localStorage if available
+    htmlEditor.setValue(localStorage.getItem('html') || '');
+    cssEditor.setValue(localStorage.getItem('css') || '');
+    jsEditor.setValue(localStorage.getItem('js') || '');
+       
+       window.addEventListener('DOMContentLoaded', () => {
+  const savedHTML = localStorage.getItem('html');
+  const savedCSS = localStorage.getItem('css');
+  const savedJS = localStorage.getItem('js');
+  const savedMedia = localStorage.getItem('mediaFiles');
 
+  if (savedHTML) htmlEditor.setValue(savedHTML);
+  if (savedCSS) cssEditor.setValue(savedCSS);
+  if (savedJS) jsEditor.setValue(savedJS);
+
+  if (savedMedia) {
+    mediaFiles = JSON.parse(savedMedia);
+    for (const [name, dataUrl] of Object.entries(mediaFiles)) {
+      const type = dataUrl.startsWith('data:image') ? 'image' : 
+                   dataUrl.startsWith('data:audio') ? 'audio' : '';
+      renderFileList(name, type, dataUrl);
+    }
+  }
+
+  run();
+});
+
+
+    run();
+  </script>
 </body>
 </html>
