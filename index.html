@@ -126,6 +126,8 @@
       <button onclick="openInNewTab()">Open in New Tab</button>
       <button onclick="clearAll()">Clear</button>
       <button onclick="downloadProject()">Download</button>
+      <input type="text" id="urlInput" placeholder="Paste URL to load HTML" style="margin-top:10px; padding: 5px;">
+<button onclick="loadFromURL()">Load URL</button>
 
       <div class="file-controls">
         <label class="file-btn">Open File
@@ -308,6 +310,23 @@
 
   run();
 });
+
+      async function loadFromURL() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return alert("Please enter a valid URL.");
+
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    htmlEditor.setValue(html);
+    switchTab('html');
+    run();
+  } catch (err) {
+    alert("Failed to load URL content. Check CORS or URL validity.");
+    console.error(err);
+  }
+}
+
 
     function downloadProject() {
       const zip = new JSZip();
